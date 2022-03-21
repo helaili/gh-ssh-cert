@@ -1,4 +1,4 @@
 org: github-ssh-authority
 repo: parcel
-pubKey: '/Users/helaili/.ssh/id_rsa.pub'
+pubKey: '~/.ssh/id_rsa.pub'
 url: https://ssh-cert-app.ngrok.io/ssh-cert-app

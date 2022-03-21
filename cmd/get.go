@@ -121,7 +121,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.AddCommand(getCmd)
-	getCmd.Flags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gh-ssh-cert.yaml)")
+	getCmd.Flags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.gh-ssh-cert.yaml)")
 	getCmd.Flags().StringP("org", "o", "", "Organization to use as a certificate authority")
 	getCmd.Flags().StringP("repo", "r", "", "Repo to use as a certificate authority")
 	getCmd.Flags().StringP("pubKey", "k", "", "Public key file")
