@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/cli/go-gh"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type SSHKey struct {
@@ -26,15 +28,17 @@ type SSHKey struct {
 
 const randomStringLength = 20
 
-var org string
-var repo string
-var pubKey string
-var serverRootURL string
+var cfgFile string
 
 var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get a new SSH certificate from GitHub",
 	Run: func(cmd *cobra.Command, args []string) {
+		org := viper.GetString("org")
+		repo := viper.GetString("repo")
+		pubKey := viper.GetString("pubKey")
+		serverRootURL := viper.GetString("url")
+
 		if org == "" && repo == "" {
 			// No flag was set, let's use the current repo if we are actually in a repo
 			currentRepoObj, _ := gh.CurrentRepository()
@@ -50,6 +54,12 @@ var getCmd = &cobra.Command{
 		}
 		if repo == "" {
 			missingFlagNames = append(missingFlagNames, "repo")
+		}
+		if pubKey == "" {
+			missingFlagNames = append(missingFlagNames, "pubKey")
+		}
+		if serverRootURL == "" {
+			missingFlagNames = append(missingFlagNames, "url")
 		}
 
 		if len(missingFlagNames) > 0 {
@@ -80,7 +90,7 @@ var getCmd = &cobra.Command{
 		for counter := 0; counter < 10; counter++ {
 			fmt.Printf("Fetching certificate %d/10\n", counter+1)
 
-			cert, error := fetchCertificate(sessionToken)
+			cert, error := fetchCertificate(serverRootURL, sessionToken)
 			if error == nil {
 				// We got the certificate, let's write it to the file
 				fmt.Println("Certificate succesfully fetched")
@@ -104,18 +114,50 @@ var getCmd = &cobra.Command{
 				break
 			}
 		}
-
 	},
 }
 
 func init() {
+	cobra.OnInitialize(initConfig)
+
 	rootCmd.AddCommand(getCmd)
-	getCmd.Flags().StringVarP(&org, "org", "o", "", "Organization to use as a certificate authority")
-	getCmd.Flags().StringVarP(&repo, "repo", "r", "", "Repo to use as a certificate authority")
-	getCmd.Flags().StringVarP(&pubKey, "pubKey", "k", "", "Public key file")
-	getCmd.MarkFlagRequired("pubKey")
-	getCmd.Flags().StringVarP(&serverRootURL, "url", "u", "", "The SSH Certificate app's root URL")
-	getCmd.MarkFlagRequired("serverRootURL")
+	getCmd.Flags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gh-ssh-cert.yaml)")
+	getCmd.Flags().StringP("org", "o", "", "Organization to use as a certificate authority")
+	getCmd.Flags().StringP("repo", "r", "", "Repo to use as a certificate authority")
+	getCmd.Flags().StringP("pubKey", "k", "", "Public key file")
+	getCmd.Flags().StringP("url", "u", "", "The SSH Certificate app's root URL")
+
+	viper.BindPFlag("org", getCmd.Flags().Lookup("org"))
+	viper.BindPFlag("repo", getCmd.Flags().Lookup("repo"))
+	viper.BindPFlag("pubKey", getCmd.Flags().Lookup("pubKey"))
+	viper.BindPFlag("url", getCmd.Flags().Lookup("url"))
+}
+
+func initConfig() {
+	viper.SetConfigType("yaml")
+
+	if cfgFile != "" {
+		// Use config file from the flag.
+		viper.SetConfigFile(cfgFile)
+	} else {
+		// Find home directory.
+		home, err := homedir.Dir()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		// Search config in current dir.
+		viper.AddConfigPath("./")
+		// Search config in home directory
+		viper.AddConfigPath(home)
+		// Use config file with name ".gh-ssh-cert" (without extension).
+		viper.SetConfigName(".gh-ssh-cert")
+	}
+
+	if err := viper.ReadInConfig(); err != nil {
+		fmt.Println("No config file found", err)
+	}
 }
 
 func randomString(n int) string {
@@ -206,7 +248,7 @@ func getSSHKey(sshKeyFile string) (SSHKey, error) {
 /*
  * Retrieve the certificate from the server
  */
-func fetchCertificate(sessionToken string) (string, error) {
+func fetchCertificate(serverRootURL string, sessionToken string) (string, error) {
 	client, clientError := gh.RESTClient(nil)
 	if clientError != nil {
 		return "", clientError
@@ -219,6 +261,8 @@ func fetchCertificate(sessionToken string) (string, error) {
 	body := fmt.Sprintf(`{"sessionToken": "%s"}`, sessionToken)
 	bodyReader := bytes.NewReader([]byte(body))
 	url := fmt.Sprintf("%s/fetch", serverRootURL)
+
+	fmt.Println(url)
 	postError := client.Post(url, bodyReader, &response)
 
 	if postError != nil {
