@@ -1,0 +1,4 @@
+org: my-org
+repo: a-repo
+pubKey: '~/.ssh/id_rsa.pub'
+url: https://somewhere.com/ssh-cert-app

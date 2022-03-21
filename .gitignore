@@ -1,3 +1,4 @@
 /gh-ssh-cert
 /gh-ssh-cert.exe
 .DS_Store
+.gh-ssh-cert.yaml
