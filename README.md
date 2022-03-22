@@ -15,7 +15,7 @@ gh extension install helaili/ssh-cert-app
 ```
 
 ## Usage
-In order to retrieve a certificate, [the SSH Cert App](https://github.com/helaili/ssh-cert-app) must be installed on at least on repository of an organisation. Users requesting a certificate must have write access to this repository. 
+In order to retrieve a certificate, [the SSH Cert App](https://github.com/helaili/ssh-cert-app) must be installed on at least one repository of an organisation. Users requesting a certificate must be authenticated and have write access to this repository. 
 
 ```cmd 
 gh ssh-cert get
